@@ -57,6 +57,7 @@ defmodule AutoApi.Property do
           | :unknown
           | :pending
           | :oem_error
+          | :privacy_mode_active
 
   @type failure :: %{reason: reason(), description: String.t()}
 
@@ -186,6 +187,12 @@ defmodule AutoApi.Property do
 
   defp data_to_bin(data, %{"type" => "types." <> type} = spec) do
     type_spec = type |> AutoApi.CustomType.spec() |> Map.put("embedded", spec["embedded"])
+
+    data_to_bin(data, type_spec)
+  end
+
+  defp data_to_bin(data, %{"type" => "events." <> type} = spec) do
+    type_spec = type |> AutoApi.Event.spec() |> Map.put("embedded", spec["embedded"])
 
     data_to_bin(data, type_spec)
   end
@@ -337,6 +344,12 @@ defmodule AutoApi.Property do
     to_value(binary_data, type_spec)
   end
 
+  defp to_value(binary_data, %{"type" => "events." <> type}) do
+    type_spec = AutoApi.Event.spec(type)
+
+    to_value(binary_data, type_spec)
+  end
+
   defp to_value(<<id, unit_id, value::float-64>>, %{"type" => "unit." <> _type}) do
     unit = AutoApi.UnitType.unit_name(id, unit_id)
 
@@ -374,6 +387,12 @@ defmodule AutoApi.Property do
   defp fetch_item_spec(%{"type" => "types." <> type}) do
     type
     |> AutoApi.CustomType.spec()
+    |> Map.put("embedded", "true")
+  end
+
+  defp fetch_item_spec(%{"type" => "events." <> type}) do
+    type
+    |> AutoApi.Event.spec()
     |> Map.put("embedded", "true")
   end
 
